@@ -1,165 +1,254 @@
 'use client'
 
-import { useState } from 'react'
-import { REGION_MAP } from '@/types'
+import { useState, useRef } from 'react'
 
-const AREA_LABELS: Record<string, string> = {
-  verbier: 'Verbier / 4 Vallées',
-  zermatt: 'Zermatt / Saas Fee',
-  crans: 'Crans-Montana',
-  saas: 'Saas / Simplon',
-  obergoms: 'Obergoms / Aletsch',
-  grindelwald: 'Grindelwald / Jungfrau',
-  adelboden: 'Adelboden / Lenk',
-  gstaad: 'Gstaad',
-  kandersteg: 'Kandersteg',
-  davos: 'Davos / Klosters',
-  stmoritz: 'St. Moritz / Engadine',
-  laax: 'Laax / Flims',
-  arosa: 'Arosa / Lenzerheide',
-  andermatt: 'Andermatt / Sedrun',
-  engelberg: 'Engelberg',
-  lugano: 'Lugano area',
-  leventina: 'Leventina / Blenio',
+const REGION_CODES: Record<string, [string, string][]> = {
+  verbier:     [['4115','Martigny–Verbier'],['4116','Haut Val de Bagnes']],
+  zermatt:     [['4222','Zermatt'],['4223','Saas Fee'],['4224','Monte Rosa']],
+  crans:       [['4121','Montana'],['4124',"Val d'Anniviers"]],
+  saas:        [['4231','N. Simplon'],['4232','S. Simplon']],
+  obergoms:    [['4241','Reckingen'],['4243','N. Obergoms'],['4244','S. Obergoms']],
+  grindelwald: [['1242','Grindelwald'],['1234','Jungfrau–Schilthorn'],['1233','Lauterbrunnen']],
+  adelboden:   [['1226','Adelboden'],['1224','Lenk'],['1227','Engstligen']],
+  gstaad:      [['1222','Gstaad'],['1223','Wildhorn']],
+  kandersteg:  [['1231','Kandersteg'],['1232','Blüemlisalp']],
+  davos:       [['5123','Davos'],['5122','Schanfigg'],['5111','N. Prättigau']],
+  stmoritz:    [['7114','St Moritz'],['7111','Corvatsch'],['7112','Bernina']],
+  laax:        [['5124','Flims'],['5214','Obersaxen–Safien']],
+  arosa:       [['5221','Domleschg–Lenzerheide'],['5231','Albulatal']],
+  andermatt:   [['2223','N. Urseren'],['2224','S. Urseren'],['2221','Meiental']],
+  engelberg:   [['2122','Engelberg'],['2121','Glaubenberg']],
+  lugano:      [['6131','Lugano area'],['6132','Mendrisio']],
+  leventina:   [['6112','Upper Leventina'],['6113','Val Blenio']],
 }
 
-const AREA_GROUPS: Record<string, string[]> = {
-  'Valais':                 ['verbier','zermatt','crans','saas','obergoms'],
-  'Bernese Alps':           ['grindelwald','adelboden','gstaad','kandersteg'],
-  'Grisons':                ['davos','stmoritz','laax','arosa'],
-  'Central Switzerland':    ['andermatt','engelberg'],
-  'Ticino / Southern Alps': ['lugano','leventina'],
-}
+type Status = 'idle' | 'submitting' | 'done' | 'error'
 
 export default function Home() {
-  const [email, setEmail]           = useState('')
-  const [area, setArea]             = useState('')
-  const [code, setCode]             = useState('')
-  const [styles, setStyles]         = useState<string[]>(['piste'])
-  const [delivery, setDelivery]     = useState('morning')
-  const [status, setStatus]         = useState<'idle'|'submitting'|'done'|'error'>('idle')
-  const [errorMsg, setErrorMsg]     = useState('')
+  const [area, setArea]         = useState('')
+  const [subCode, setSubCode]   = useState('')
+  const [styles, setStyles]     = useState<string[]>(['piste'])
+  const [delivery, setDelivery] = useState('morning')
+  const [status, setStatus]     = useState<Status>('idle')
+  const [successTime, setSuccessTime] = useState('08:15 CET')
+  const emailRef = useRef<HTMLInputElement>(null)
 
-  const subRegions = area ? REGION_MAP[area] ?? [] : []
+  const subRegions = area ? (REGION_CODES[area] ?? []) : []
 
   const toggleStyle = (s: string) =>
     setStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!email || !area || !styles.length) return
+    const email = emailRef.current?.value.trim() ?? ''
+    if (!email || !area) return
     setStatus('submitting')
-    setErrorMsg('')
 
     try {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, region_area: area, region_code: code || null, styles, delivery }),
+        body: JSON.stringify({ email, region_area: area, region_code: subCode || null, styles, delivery }),
       })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? 'Subscription failed')
-      }
+      if (!res.ok) throw new Error('failed')
+      const timeLabel =
+        delivery === 'morning' ? '08:15 CET' :
+        delivery === 'evening' ? '17:15 CET' :
+        '08:15 and 17:15 CET'
+      setSuccessTime(timeLabel)
       setStatus('done')
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
       setStatus('error')
     }
   }
 
-  const deliveryLabel = delivery === 'both' ? '08:15 and 17:15 CET'
-    : delivery === 'morning' ? '08:15 CET' : '17:15 CET'
-
-  // Inject the static HTML page (from public/signup.html) via an iframe,
-  // or render the React form below. Using the React form keeps state in one place.
   return (
     <>
-      {/* The full styled page is in public/index.html — swap to that for production
-          or convert it to a proper React component. This minimal form is the 
-          functional wiring you need. */}
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: '40px 24px', fontFamily: 'Georgia, serif' }}>
-        <p style={{ fontFamily: 'monospace', fontSize: 11, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>SnowDesk</p>
-        <h1 style={{ fontSize: 36, fontWeight: 700, margin: '8px 0 8px' }}>Know before you drop in.</h1>
-        <p style={{ fontSize: 14, color: '#555', lineHeight: 1.8, marginBottom: 32 }}>
-          Daily avalanche briefings for the Swiss Alps — sourced from the SLF bulletin, tailored to your skiing style.
-        </p>
+      <svg className="mountain-bg" viewBox="0 0 1440 260" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <path d="M0,260 L0,180 L80,140 L140,165 L200,100 L280,130 L340,60 L420,100 L500,40 L560,80 L620,30 L700,70 L760,20 L820,55 L880,10 L940,50 L1000,80 L1060,35 L1120,70 L1180,45 L1260,90 L1320,60 L1380,100 L1440,80 L1440,260 Z" fill="var(--ink)"/>
+        <path d="M0,260 L0,210 L100,185 L180,200 L260,160 L340,175 L400,140 L480,160 L560,120 L640,145 L720,110 L800,135 L860,105 L940,130 L1020,145 L1100,115 L1180,140 L1260,155 L1340,135 L1440,150 L1440,260 Z" fill="var(--ink)" opacity="0.5"/>
+      </svg>
 
-        {status === 'done' ? (
-          <div style={{ padding: '28px 24px', border: '1px solid #c5b9a8', borderRadius: 3, textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>You&apos;re subscribed.</h2>
-            <p style={{ fontSize: 14, color: '#555' }}>Check your inbox for a confirmation. Your first briefing arrives at {deliveryLabel}.</p>
+      <div className="page">
+        <header className="masthead">
+          <span className="masthead-logo">SnowDesk</span>
+          <span className="masthead-tag">Daily avalanche briefings · Swiss Alps</span>
+        </header>
+
+        <section className="hero">
+          <p className="hero-kicker">Free daily briefing</p>
+          <h1 className="hero-headline">Know before<br />you <em>drop in.</em></h1>
+          <p className="hero-sub">Every morning, a concise avalanche briefing for your region — sourced directly from the SLF bulletin, analysed for your style of skiing.</p>
+          <div className="sample-strip">
+            <span className="sample-pill pill-safe"><span className="pill-dot" />Level 1–2 · Go</span>
+            <span className="sample-pill pill-warn"><span className="pill-dot" />Level 3 · Caution</span>
+            <span className="sample-pill pill-danger"><span className="pill-dot" />Level 4–5 · Avoid backcountry</span>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        </section>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#888' }}>Email address</span>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com" required
-                style={{ padding: '10px 12px', border: '1px solid #c5b9a8', borderRadius: 2, fontSize: 14, fontFamily: 'Georgia, serif' }} />
-            </label>
+        <div className="divider">
+          <span className="divider-line" />
+          <span className="divider-text">Subscribe</span>
+          <span className="divider-line" />
+        </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#888' }}>Region</span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <select value={area} onChange={e => { setArea(e.target.value); setCode('') }} required
-                  style={{ padding: '10px 12px', border: '1px solid #c5b9a8', borderRadius: 2, fontSize: 13, fontFamily: 'Georgia, serif' }}>
-                  <option value="" disabled>Select area</option>
-                  {Object.entries(AREA_GROUPS).map(([group, areas]) => (
-                    <optgroup key={group} label={group}>
-                      {areas.map(a => <option key={a} value={a}>{AREA_LABELS[a]}</option>)}
-                    </optgroup>
+        <div className="form-wrap">
+          {status === 'done' ? (
+            <div className="success-panel visible">
+              <span className="success-mark">✓</span>
+              <h2 className="success-headline">You&apos;re subscribed.</h2>
+              <p className="success-sub">Check your inbox for a confirmation.<br />Your first briefing arrives tomorrow at <strong>{successTime}</strong>.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate>
+
+              <div className="form-row">
+                <label className="form-label" htmlFor="email">Email address</label>
+                <input type="email" id="email" ref={emailRef} placeholder="you@example.com" required autoComplete="email" />
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Region</label>
+                <p className="form-hint">Choose the area you ski most. You can add more regions later.</p>
+                <div className="region-group">
+                  <div className="select-wrap">
+                    <select value={area} onChange={e => { setArea(e.target.value); setSubCode('') }} required>
+                      <option value="" disabled>Select area</option>
+                      <optgroup label="Valais">
+                        <option value="verbier">Verbier / 4 Vallées</option>
+                        <option value="zermatt">Zermatt / Saas Fee</option>
+                        <option value="crans">Crans-Montana</option>
+                        <option value="saas">Saas Grund / Simplon</option>
+                        <option value="obergoms">Obergoms / Aletsch</option>
+                      </optgroup>
+                      <optgroup label="Bernese Alps">
+                        <option value="grindelwald">Grindelwald / Jungfrau</option>
+                        <option value="adelboden">Adelboden / Lenk</option>
+                        <option value="gstaad">Gstaad</option>
+                        <option value="kandersteg">Kandersteg</option>
+                      </optgroup>
+                      <optgroup label="Grisons">
+                        <option value="davos">Davos / Klosters</option>
+                        <option value="stmoritz">St. Moritz / Engadine</option>
+                        <option value="laax">Laax / Flims</option>
+                        <option value="arosa">Arosa / Lenzerheide</option>
+                      </optgroup>
+                      <optgroup label="Central Switzerland">
+                        <option value="andermatt">Andermatt / Sedrun</option>
+                        <option value="engelberg">Engelberg</option>
+                      </optgroup>
+                      <optgroup label="Ticino / Southern Alps">
+                        <option value="lugano">Lugano area</option>
+                        <option value="leventina">Leventina / Blenio</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div className="select-wrap">
+                    <select value={subCode} onChange={e => setSubCode(e.target.value)} disabled={subRegions.length === 0}>
+                      <option value="">Sub-region (optional)</option>
+                      {subRegions.map(([val, label]) => (
+                        <option key={val} value={val}>{label} ({val})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Your skiing style</label>
+                <p className="form-hint">Select all that apply — your briefing will be tailored accordingly.</p>
+                <div className="tile-group">
+                  {[['piste','⛷','On-piste'],['offpiste','🌨','Off-piste / powder'],['touring','🎿','Ski touring']].map(([val,icon,name]) => (
+                    <div key={val} className="tile">
+                      <input type="checkbox" id={`style_${val}`} value={val} checked={styles.includes(val)} onChange={() => toggleStyle(val)} />
+                      <label htmlFor={`style_${val}`}>
+                        <span className="tile-icon">{icon}</span>
+                        <span className="tile-name">{name}</span>
+                      </label>
+                    </div>
                   ))}
-                </select>
-                <select value={code} onChange={e => setCode(e.target.value)} disabled={!subRegions.length}
-                  style={{ padding: '10px 12px', border: '1px solid #c5b9a8', borderRadius: 2, fontSize: 13, fontFamily: 'Georgia, serif' }}>
-                  <option value="">Sub-region (optional)</option>
-                  {subRegions.map(([val, label]) => <option key={val} value={val}>{label} ({val})</option>)}
-                </select>
+                </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#888' }}>Skiing style</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                {[['piste','⛷','On-piste'],['offpiste','🌨','Off-piste'],['touring','🎿','Ski touring']].map(([val, icon, label]) => (
-                  <button key={val} type="button" onClick={() => toggleStyle(val)}
-                    style={{ padding: '12px 8px', border: `1px solid ${styles.includes(val) ? '#2d4a3e' : '#c5b9a8'}`, borderRadius: 2, background: styles.includes(val) ? '#2d4a3e' : 'rgba(255,255,255,0.4)', color: styles.includes(val) ? '#fff' : '#4a4035', cursor: 'pointer', fontSize: 13 }}>
-                    <div style={{ fontSize: 18 }}>{icon}</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{label}</div>
-                  </button>
+              <div className="form-row">
+                <label className="form-label">Delivery</label>
+                <p className="form-hint">The SLF bulletin publishes at 08:00 and 17:00 CET. Your briefing arrives 15 minutes after each update.</p>
+                <div className="delivery-tile-group">
+                  {[
+                    ['morning','08:15 CET','Morning only','Start your day with the latest bulletin'],
+                    ['evening','17:15 CET','Evening only',"Plan tomorrow's skiing the night before"],
+                    ['both','08:15 + 17:15','Both','Morning update and evening forecast'],
+                  ].map(([val,time,name,desc]) => (
+                    <div key={val} className="delivery-tile">
+                      <input type="radio" id={`delivery_${val}`} name="delivery" value={val} checked={delivery === val} onChange={() => setDelivery(val)} />
+                      <label htmlFor={`delivery_${val}`}>
+                        <span className="delivery-tile-time">{time}</span>
+                        <span className="delivery-tile-name">{name}</span>
+                        <span className="delivery-tile-desc">{desc}</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {status === 'error' && (
+                <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>⚠ Something went wrong — please try again.</p>
+              )}
+
+              <div className="submit-row">
+                <button type="submit" className="submit-btn" disabled={status === 'submitting'}>
+                  {status === 'submitting' ? 'Subscribing...' : 'Start my briefings →'}
+                </button>
+                <p className="submit-note">Free forever. One email per day. Unsubscribe in a single click.</p>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="preview-strip">
+          <p className="preview-label">Sample briefing</p>
+          <div className="preview-card">
+            <div className="preview-date">Thu 26 March · 08:15 CET · Verbier / 4 Vallées</div>
+            <div className="preview-subject">🏔 STAY ON PISTE — High (4−) lower terrain</div>
+            <div className="preview-weather">
+              <div className="preview-weather-label">Weather · now</div>
+              <div className="preview-weather-grid">
+                {[
+                  ['−10°C','summit (3300m)',''],
+                  ['−4°C','mid-mountain (2400m)',''],
+                  ['0°C','resort (1500m)',''],
+                  ['~1000m','freezing level',''],
+                  ['Storm NNW','wind · 70–90 km/h summit','warn-val'],
+                  ['Poor','visibility · heavy snowfall','warn-val'],
+                  ['40–60 cm','new snow (24 hrs)',''],
+                  ['200–240 cm','base depth (upper mtn)',''],
+                ].map(([val, key, cls], i) => (
+                  <div key={i} className="weather-cell">
+                    <span className={`weather-cell-val${cls ? ' ' + cls : ''}`}>{val}</span>
+                    <span className="weather-cell-key">{key}</span>
+                  </div>
                 ))}
               </div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#888' }}>Delivery</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                {[['morning','08:15 CET','Morning only','Start your day'],['evening','17:15 CET','Evening only','Plan tomorrow'],['both','08:15 + 17:15','Both','Full coverage']].map(([val, time, name, desc]) => (
-                  <button key={val} type="button" onClick={() => setDelivery(val)}
-                    style={{ padding: '12px 10px', border: `1px solid ${delivery === val ? '#2d4a3e' : '#c5b9a8'}`, borderRadius: 2, background: delivery === val ? '#2d4a3e' : 'rgba(255,255,255,0.4)', color: delivery === val ? '#fff' : '#4a4035', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700 }}>{time}</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 3 }}>{name}</div>
-                    <div style={{ fontSize: 10, marginTop: 2, opacity: 0.75 }}>{desc}</div>
-                  </button>
-                ))}
+            {[
+              ['On-piste','Good — fresh groomed snow, check lift opening times','good'],
+              ['Off-piste','Very Risky — natural release expected, remote triggering likely','risky'],
+              ['Ski touring','Avoid — do not tour today','avoid'],
+              ['Outlook','Danger decreasing Sat — cautious off-piste returning',''],
+            ].map(([label, val, cls]) => (
+              <div key={label} className="preview-row">
+                <span className="preview-row-label">{label}</span>
+                <span className={`preview-row-val${cls ? ' ' + cls : ''}`}>{val}</span>
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            {status === 'error' && (
-              <p style={{ color: '#b91c1c', fontSize: 13 }}>⚠ {errorMsg}</p>
-            )}
-
-            <button type="submit" disabled={status === 'submitting'}
-              style={{ padding: '13px 28px', background: '#1a1612', color: '#f5f0e8', border: 'none', borderRadius: 2, fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', alignSelf: 'flex-start' }}>
-              {status === 'submitting' ? 'Subscribing...' : 'Start my briefings →'}
-            </button>
-
-          </form>
-        )}
-      </main>
+        <footer className="site-footer">
+          <span className="footer-copy">© {new Date().getFullYear()} SnowDesk</span>
+          <span className="footer-source">Data: SLF / WSL Institute · whiterisk.ch · aws.slf.ch</span>
+        </footer>
+      </div>
     </>
   )
 }
