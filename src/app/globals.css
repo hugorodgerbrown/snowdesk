@@ -119,7 +119,7 @@ body::before {
   font-size: 15px;
   line-height: 1.75;
   color: var(--ink-mid);
-  max-width: 480px;
+  /* max-width: 480px; */
 }
 
 /* sample pills */
