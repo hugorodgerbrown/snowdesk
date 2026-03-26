@@ -10,11 +10,11 @@
     "db:migrate": "node src/lib/migrate.js"
   },
   "dependencies": {
-    "next": "^14.2.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
     "@anthropic-ai/sdk": "^0.27.0",
     "@supabase/supabase-js": "^2.44.0",
+    "next": "^16.2.1",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
     "resend": "^3.4.0",
     "zod": "^3.23.0"
   },
