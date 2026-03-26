@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnowDesk — Daily Avalanche Briefings</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f5f0e8;
+    --cream-dark: #ede6d6;
+    --ink: #1a1612;
+    --ink-mid: #4a4035;
+    --ink-light: #8a7d6e;
+    --ink-faint: #c5b9a8;
+    --alpine: #2d4a3e;
+    --alpine-light: #3d6354;
+    --accent: #c4722a;
+    --danger: #8b2e2e;
+    --warn: #7a5c1e;
+    --safe: #2d4a3e;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* — topographic background pattern — */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 39px,
+        rgba(180,160,130,0.12) 39px,
+        rgba(180,160,130,0.12) 40px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 39px,
+        rgba(180,160,130,0.06) 39px,
+        rgba(180,160,130,0.06) 40px
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* — mountain silhouette — */
+  .mountain-bg {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 260px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.06;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* — masthead — */
+  .masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 28px 0 20px;
+    border-bottom: 1.5px solid var(--ink);
+    margin-bottom: 56px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .masthead-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .masthead-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* — hero — */
+  .hero {
+    margin-bottom: 52px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  .hero-kicker {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--alpine);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-kicker::before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--alpine);
+  }
+
+  .hero-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 7vw, 58px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+
+  .hero-headline em {
+    font-style: italic;
+    color: var(--alpine);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink-mid);
+    max-width: 480px;
+  }
+
+  /* — sample badge — */
+  .sample-strip {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+
+  .sample-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .pill-danger { background: rgba(139,46,46,0.08); color: var(--danger); border: 1px solid rgba(139,46,46,0.2); }
+  .pill-warn   { background: rgba(122,92,30,0.08); color: var(--warn);   border: 1px solid rgba(122,92,30,0.2); }
+  .pill-safe   { background: rgba(45,74,62,0.08);  color: var(--safe);   border: 1px solid rgba(45,74,62,0.2); }
+
+  .pill-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+  }
+
+  /* — divider — */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 48px 0 40px;
+    animation: fadeDown 0.6s 0.2s ease both;
+  }
+
+  .divider-line { flex: 1; height: 1px; background: var(--ink-faint); }
+  .divider-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+  }
+
+  /* — form — */
+  .form-wrap {
+    animation: fadeDown 0.6s 0.25s ease both;
+  }
+
+  .form-row {
+    margin-bottom: 28px;
+  }
+
+  .form-label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    margin-bottom: 8px;
+  }
+
+  .form-hint {
+    font-size: 12px;
+    color: var(--ink-light);
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  input[type="email"],
+  input[type="text"],
+  select {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--ink-faint);
+    border-radius: 2px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input[type="email"]:focus,
+  select:focus {
+    border-color: var(--alpine);
+    background: rgba(255,255,255,0.9);
+  }
+
+  input[type="email"]::placeholder { color: var(--ink-faint); }
+
+  .select-wrap {
+    position: relative;
+  }
+
+  .select-wrap::after {
+    content: '↓';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--ink-light);
+    pointer-events: none;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* — region group — */
+  .region-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  /* — checkbox tiles — */
+  .tile-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .tile input[type="checkbox"] { display: none; }
+
+  .tile label {
+    display: block;
+    padding: 12px 10px;
+    border: 1px solid var(--ink-faint);
+    border-radius: 2px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    background: rgba(255,255,255,0.4);
+  }
+
+  .tile-icon {
+    font-size: 18px;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .tile-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    display: block;
+    line-height: 1.4;
+  }
+
+  .tile input:checked + label {
+    background: var(--alpine);
+    border-color: var(--alpine);
+  }
+
+  .tile input:checked + label .tile-name {
+    color: rgba(255,255,255,0.85);
+  }
+
+  /* — delivery tiles — */
+  .delivery-tile-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .delivery-tile input[type="radio"] { display: none; }
+
+  .delivery-tile label {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 12px;
+    border: 1px solid var(--ink-faint);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: rgba(255,255,255,0.4);
+    gap: 3px;
+  }
+
+  .delivery-tile label:hover {
+    border-color: var(--ink-mid);
+    background: rgba(255,255,255,0.7);
+  }
+
+  .delivery-tile input:checked + label {
+    background: var(--alpine);
+    border-color: var(--alpine);
+  }
+
+  .delivery-tile-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    transition: color 0.15s;
+  }
+
+  .delivery-tile-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-mid);
+    transition: color 0.15s;
+  }
+
+  .delivery-tile-desc {
+    font-size: 11px;
+    color: var(--ink-light);
+    line-height: 1.4;
+    margin-top: 2px;
+    transition: color 0.15s;
+  }
+
+  .delivery-tile input:checked + label .delivery-tile-time,
+  .delivery-tile input:checked + label .delivery-tile-name {
+    color: #fff;
+  }
+
+  .delivery-tile input:checked + label .delivery-tile-desc {
+    color: rgba(255,255,255,0.65);
+  }
+
+  /* — submit — */
+  .submit-row {
+    margin-top: 36px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .submit-btn {
+    padding: 14px 36px;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .submit-btn:hover { background: var(--alpine); }
+  .submit-btn:active { transform: scale(0.99); }
+
+  .submit-note {
+    font-size: 11px;
+    color: var(--ink-light);
+    line-height: 1.6;
+    max-width: 260px;
+  }
+
+  /* — success state — */
+  .success-panel {
+    display: none;
+    text-align: center;
+    padding: 48px 32px;
+    border: 1px solid var(--ink-faint);
+    border-radius: 2px;
+    background: rgba(255,255,255,0.5);
+  }
+
+  .success-panel.visible { display: block; }
+
+  .success-mark {
+    font-family: 'Playfair Display', serif;
+    font-size: 48px;
+    color: var(--alpine);
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .success-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+
+  .success-sub {
+    font-size: 14px;
+    color: var(--ink-mid);
+    line-height: 1.7;
+  }
+
+  /* — sample preview — */
+  .preview-strip {
+    margin-top: 64px;
+    padding-top: 40px;
+    border-top: 1px solid var(--ink-faint);
+    animation: fadeDown 0.6s 0.35s ease both;
+  }
+
+  .preview-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 20px;
+  }
+
+  .preview-card {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--ink-faint);
+    border-radius: 2px;
+    padding: 24px 28px;
+  }
+
+  .preview-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .preview-subject {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+
+  .preview-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(180,160,130,0.2);
+    font-size: 13px;
+  }
+
+  .preview-row:last-child { border-bottom: none; }
+
+  .preview-row-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-light);
+  }
+
+  .preview-row-val { font-weight: 400; color: var(--ink-mid); }
+  .preview-row-val.good  { color: var(--safe); }
+  .preview-row-val.risky { color: var(--accent); }
+  .preview-row-val.avoid { color: var(--danger); }
+
+  /* — footer — */
+  .site-footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    animation: fadeDown 0.6s 0.4s ease both;
+  }
+
+  .footer-copy {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-light);
+    letter-spacing: 0.08em;
+  }
+
+  .footer-source {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.06em;
+  }
+
+  /* — animations — */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* — weather grid in preview — */
+  .preview-weather {
+    margin: 14px 0 4px;
+    padding: 14px 0 14px;
+    border-top: 1px solid rgba(180,160,130,0.25);
+    border-bottom: 1px solid rgba(180,160,130,0.25);
+  }
+
+  .preview-weather-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-light);
+    margin-bottom: 10px;
+  }
+
+  .preview-weather-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 8px;
+  }
+
+  .weather-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .weather-cell-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .weather-cell-val.warn-val { color: var(--accent); }
+
+  .weather-cell-key {
+    font-size: 10px;
+    color: var(--ink-light);
+    line-height: 1.35;
+  }
+
+  /* — responsive — */
+  @media (max-width: 520px) {
+    .preview-weather-grid { grid-template-columns: repeat(2, 1fr); }
+    .tile-group { grid-template-columns: repeat(3, 1fr); }
+    .delivery-tile-group { grid-template-columns: 1fr; }
+    .region-group { grid-template-columns: 1fr; }
+    .hero-headline { font-size: 36px; }
+    .submit-row { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- mountain silhouette SVG -->
+<svg class="mountain-bg" viewBox="0 0 1440 260" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+  <path d="M0,260 L0,180 L80,140 L140,165 L200,100 L280,130 L340,60 L420,100 L500,40 L560,80 L620,30 L700,70 L760,20 L820,55 L880,10 L940,50 L1000,80 L1060,35 L1120,70 L1180,45 L1260,90 L1320,60 L1380,100 L1440,80 L1440,260 Z" fill="var(--ink)"/>
+  <path d="M0,260 L0,210 L100,185 L180,200 L260,160 L340,175 L400,140 L480,160 L560,120 L640,145 L720,110 L800,135 L860,105 L940,130 L1020,145 L1100,115 L1180,140 L1260,155 L1340,135 L1440,150 L1440,260 Z" fill="var(--ink)" opacity="0.5"/>
+</svg>
+
+<div class="page">
+
+  <header class="masthead">
+    <span class="masthead-logo">SnowDesk</span>
+    <span class="masthead-tag">Daily avalanche briefings · Swiss Alps</span>
+  </header>
+
+  <section class="hero">
+    <p class="hero-kicker">Free daily briefing</p>
+    <h1 class="hero-headline">Know before<br>you <em>drop in.</em></h1>
+    <p class="hero-sub">Every morning, a concise avalanche briefing for your region — sourced directly from the SLF bulletin, analysed for your style of skiing.</p>
+
+    <div class="sample-strip">
+      <span class="sample-pill pill-safe"><span class="pill-dot"></span>Level 1–2 · Go</span>
+      <span class="sample-pill pill-warn"><span class="pill-dot"></span>Level 3 · Caution</span>
+      <span class="sample-pill pill-danger"><span class="pill-dot"></span>Level 4–5 · Avoid backcountry</span>
+    </div>
+  </section>
+
+  <div class="divider">
+    <span class="divider-line"></span>
+    <span class="divider-text">Subscribe</span>
+    <span class="divider-line"></span>
+  </div>
+
+  <div class="form-wrap">
+    <form id="signupForm" novalidate>
+
+      <div class="form-row">
+        <label class="form-label" for="email">Email address</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Region</label>
+        <p class="form-hint">Choose the area you ski most. You can add more regions later.</p>
+        <div class="region-group">
+          <div class="select-wrap">
+            <select id="region_area" name="region_area" required>
+              <option value="" disabled selected>Select area</option>
+              <optgroup label="Valais">
+                <option value="verbier">Verbier / 4 Vallées</option>
+                <option value="zermatt">Zermatt / Saas Fee</option>
+                <option value="crans">Crans-Montana</option>
+                <option value="saas">Saas Grund / Simplonregion</option>
+                <option value="obergoms">Obergoms / Aletsch</option>
+              </optgroup>
+              <optgroup label="Bernese Alps">
+                <option value="grindelwald">Grindelwald / Jungfrau</option>
+                <option value="adelboden">Adelboden / Lenk</option>
+                <option value="gstaad">Gstaad</option>
+                <option value="kandersteg">Kandersteg</option>
+              </optgroup>
+              <optgroup label="Grisons">
+                <option value="davos">Davos / Klosters</option>
+                <option value="stmoritz">St. Moritz / Engadine</option>
+                <option value="laax">Laax / Flims</option>
+                <option value="arosa">Arosa / Lenzerheide</option>
+              </optgroup>
+              <optgroup label="Central Switzerland">
+                <option value="andermatt">Andermatt / Sedrun</option>
+                <option value="engelberg">Engelberg</option>
+              </optgroup>
+              <optgroup label="Ticino / Southern Alps">
+                <option value="lugano">Lugano area</option>
+                <option value="leventina">Leventina / Blenio</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="select-wrap">
+            <select id="region_code" name="region_code">
+              <option value="" disabled selected>Specific sub-region</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Your skiing style</label>
+        <p class="form-hint">Select all that apply — your briefing will be tailored accordingly.</p>
+        <div class="tile-group">
+          <div class="tile">
+            <input type="checkbox" id="style_piste" name="style" value="piste" checked>
+            <label for="style_piste">
+              <span class="tile-icon">⛷</span>
+              <span class="tile-name">On-piste</span>
+            </label>
+          </div>
+          <div class="tile">
+            <input type="checkbox" id="style_offpiste" name="style" value="offpiste">
+            <label for="style_offpiste">
+              <span class="tile-icon">🌨</span>
+              <span class="tile-name">Off-piste / powder</span>
+            </label>
+          </div>
+          <div class="tile">
+            <input type="checkbox" id="style_touring" name="style" value="touring">
+            <label for="style_touring">
+              <span class="tile-icon">🎿</span>
+              <span class="tile-name">Ski touring</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Delivery</label>
+        <p class="form-hint">The SLF bulletin publishes at 08:00 and 17:00 CET. Your briefing arrives 15 minutes after each update.</p>
+        <div class="delivery-tile-group">
+          <div class="delivery-tile">
+            <input type="radio" id="delivery_morning" name="delivery" value="morning" checked>
+            <label for="delivery_morning">
+              <span class="delivery-tile-time">08:15 CET</span>
+              <span class="delivery-tile-name">Morning only</span>
+              <span class="delivery-tile-desc">Start your day with the latest bulletin</span>
+            </label>
+          </div>
+          <div class="delivery-tile">
+            <input type="radio" id="delivery_evening" name="delivery" value="evening">
+            <label for="delivery_evening">
+              <span class="delivery-tile-time">17:15 CET</span>
+              <span class="delivery-tile-name">Evening only</span>
+              <span class="delivery-tile-desc">Plan tomorrow's skiing the night before</span>
+            </label>
+          </div>
+          <div class="delivery-tile">
+            <input type="radio" id="delivery_both" name="delivery" value="both">
+            <label for="delivery_both">
+              <span class="delivery-tile-time">08:15 + 17:15</span>
+              <span class="delivery-tile-name">Both</span>
+              <span class="delivery-tile-desc">Morning update and evening forecast</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="submit-btn" id="submitBtn">
+          Start my briefings →
+        </button>
+        <p class="submit-note">Free forever. One email per day. Unsubscribe in a single click.</p>
+      </div>
+
+    </form>
+
+    <div class="success-panel" id="successPanel">
+      <span class="success-mark">✓</span>
+      <h2 class="success-headline">You're subscribed.</h2>
+      <p class="success-sub">Check your inbox for a confirmation.<br>Your first briefing arrives tomorrow at <span id="successTime">7:00 am</span>.</p>
+    </div>
+  </div>
+
+  <!-- sample email preview -->
+  <div class="preview-strip">
+    <p class="preview-label">Sample briefing</p>
+    <div class="preview-card">
+      <div class="preview-date">Thu 26 March · 07:00 CET · Verbier / 4 Vallées</div>
+      <div class="preview-subject">🏔 STAY ON PISTE — High (4−) lower terrain</div>
+
+      <!-- weather summary -->
+      <div class="preview-weather">
+        <div class="preview-weather-label">Weather · now</div>
+        <div class="preview-weather-grid">
+          <div class="weather-cell">
+            <span class="weather-cell-val">−10°C</span>
+            <span class="weather-cell-key">summit (3300m)</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val">−4°C</span>
+            <span class="weather-cell-key">mid-mountain (2400m)</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val">0°C</span>
+            <span class="weather-cell-key">resort (1500m)</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val">~1000m</span>
+            <span class="weather-cell-key">freezing level</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val warn-val">Storm NNW</span>
+            <span class="weather-cell-key">wind · 70–90 km/h summit</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val warn-val">Poor</span>
+            <span class="weather-cell-key">visibility · heavy snowfall</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val">40–60 cm</span>
+            <span class="weather-cell-key">new snow (24 hrs)</span>
+          </div>
+          <div class="weather-cell">
+            <span class="weather-cell-val">200–240 cm</span>
+            <span class="weather-cell-key">base depth (upper mtn)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-row">
+        <span class="preview-row-label">On-piste</span>
+        <span class="preview-row-val good">Good — fresh groomed snow, check lift opening times</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-row-label">Off-piste</span>
+        <span class="preview-row-val risky">Very Risky — natural release expected, remote triggering likely</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-row-label">Ski touring</span>
+        <span class="preview-row-val avoid">Avoid — do not tour today</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-row-label">Outlook</span>
+        <span class="preview-row-val">Danger decreasing Sat — cautious off-piste returning</span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span class="footer-copy">© 2026 SnowDesk</span>
+    <span class="footer-source">Data: SLF / WSL Institute · whiterisk.ch · aws.slf.ch</span>
+  </footer>
+
+</div>
+
+<script>
+  const REGION_CODES = {
+    verbier:    [["4115","Martigny–Verbier"],["4116","Haut Val de Bagnes"]],
+    zermatt:    [["4222","Zermatt"],["4223","Saas Fee"],["4224","Monte Rosa"]],
+    crans:      [["4121","Montana"],["4124","Val d'Anniviers"]],
+    saas:       [["4231","N. Simplon"],["4232","S. Simplon"]],
+    obergoms:   [["4241","Reckingen"],["4243","N. Obergoms"],["4244","S. Obergoms"]],
+    grindelwald:[["1242","Grindelwald"],["1234","Jungfrau–Schilthorn"],["1233","Lauterbrunnen"]],
+    adelboden:  [["1226","Adelboden"],["1224","Lenk"],["1227","Engstligen"]],
+    gstaad:     [["1222","Gstaad"],["1223","Wildhorn"]],
+    kandersteg: [["1231","Kandersteg"],["1232","Blüemlisalp"]],
+    davos:      [["5123","Davos"],["5122","Schanfigg"],["5111","N. Prättigau"]],
+    stmoritz:   [["7114","St Moritz"],["7111","Corvatsch"],["7112","Bernina"]],
+    laax:       [["5124","Flims"],["5214","Obersaxen–Safien"]],
+    arosa:      [["5221","Domleschg–Lenzerheide"],["5231","Albulatal"]],
+    andermatt:  [["2223","N. Urseren"],["2224","S. Urseren"],["2221","Meiental"]],
+    engelberg:  [["2122","Engelberg"],["2121","Glaubenberg"]],
+    lugano:     [["6131","Lugano area"],["6132","Mendrisio"]],
+    leventina:  [["6112","Upper Leventina"],["6113","Val Blenio"]],
+  };
+
+  const areaEl = document.getElementById('region_area');
+  const codeEl = document.getElementById('region_code');
+
+  areaEl.addEventListener('change', () => {
+    const codes = REGION_CODES[areaEl.value] || [];
+    codeEl.innerHTML = '<option value="" disabled selected>Sub-region (optional)</option>';
+    codes.forEach(([val, label]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = `${label} (${val})`;
+      codeEl.appendChild(opt);
+    });
+  });
+
+  document.getElementById('signupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    if (!email || !email.includes('@')) {
+      document.getElementById('email').focus();
+      return;
+    }
+    const area = areaEl.value;
+    if (!area) {
+      areaEl.focus();
+      return;
+    }
+    const delivery = document.querySelector('input[name="delivery"]:checked')?.value || 'morning';
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = 'Subscribing...';
+    btn.disabled = true;
+
+    // TODO: POST to /api/subscribe with { email, region_area, region_code, styles, delivery }
+    setTimeout(() => {
+      document.getElementById('signupForm').style.display = 'none';
+      const panel = document.getElementById('successPanel');
+      panel.classList.add('visible');
+      const timeLabel = delivery === 'morning' ? '08:15 CET'
+                      : delivery === 'evening' ? '17:15 CET'
+                      : '08:15 and 17:15 CET';
+      document.getElementById('successTime').textContent = timeLabel;
+    }, 800);
+  });
+</script>
+</body>
+</html>
