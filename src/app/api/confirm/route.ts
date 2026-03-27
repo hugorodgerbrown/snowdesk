@@ -1,3 +1,19 @@
+/**
+ * GET /api/confirm?token=<token>
+ *
+ * Confirms a subscriber's email address after they click the link in their
+ * confirmation email.
+ *
+ * - Looks up the subscriber by their unique `unsubscribe_token`
+ * - Sets `confirmed = true` on the matching row in the `subscribers` table
+ * - Redirects to /?confirmed=true on success so the sign-up page can show
+ *   a confirmation message
+ * - Redirects to /?error=confirm_failed if the token is not found or the
+ *   database update fails
+ *
+ * Unconfirmed subscribers are never included in the cron job send runs.
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 

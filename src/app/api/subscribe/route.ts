@@ -1,3 +1,18 @@
+/**
+ * POST /api/subscribe
+ *
+ * Handles new subscriber sign-ups from the sign-up page form.
+ *
+ * - Validates the incoming JSON body (email, region, styles, delivery preference)
+ * - Upserts a row into the `subscribers` table in Supabase
+ *   (if the same email + region already exists, preferences are updated and
+ *   confirmation is reset so a fresh confirmation email is sent)
+ * - Sends a confirmation email via Resend containing a link to /api/confirm?token=<token>
+ * - The subscriber will not receive briefings until they click the confirmation link
+ *
+ * Returns 200 { success: true } on success, or 400/500 with an error message.
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase'

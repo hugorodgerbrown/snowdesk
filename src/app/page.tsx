@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import LivePreview from './LivePreview'
 
 const REGION_CODES: Record<string, [string, string][]> = {
   verbier:     [['4115','Martigny–Verbier'],['4116','Haut Val de Bagnes']],
@@ -76,9 +77,9 @@ export default function Home() {
         </header>
 
         <section className="hero">
-          {/* <p className="hero-kicker">Free daily briefing</p> */}
-          <h1 className="hero-headline">Know before you <em>drop in.</em></h1>
-          <p className="hero-sub">A concise avalanche briefing for your region — sourced directly from the SLF bulletin, analysed for your style of skiing.</p>
+          <p className="hero-kicker">Free daily briefing</p>
+          <h1 className="hero-headline">Know before<br />you <em>drop in.</em></h1>
+          <p className="hero-sub">Every morning, a concise avalanche briefing for your region — sourced directly from the SLF bulletin, analysed for your style of skiing.</p>
           <div className="sample-strip">
             <span className="sample-pill pill-safe"><span className="pill-dot" />Level 1–2 · Go</span>
             <span className="sample-pill pill-warn"><span className="pill-dot" />Level 3 · Caution</span>
@@ -86,51 +87,7 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="divider">
-          <span className="divider-line" />
-          <span className="divider-text">Sample briefing</span>
-          <span className="divider-line" />
-        </div>
-
-
-        <div className="x_preview-strip">
-          {/* <p className="preview-label">Sample briefing</p> */}
-          <div className="preview-card">
-            <div className="preview-date">Thu 26 March · 08:15 CET · Verbier / 4 Vallées</div>
-            <div className="preview-subject">🏔 STAY ON PISTE — High (4−) lower terrain</div>
-            <div className="preview-weather">
-              <div className="preview-weather-label">Weather · now</div>
-              <div className="preview-weather-grid">
-                {[
-                  ['−10°C','summit (3300m)',''],
-                  ['−4°C','mid-mountain (2400m)',''],
-                  ['0°C','resort (1500m)',''],
-                  ['~1000m','freezing level',''],
-                  ['Storm NNW','wind · 70–90 km/h summit','warn-val'],
-                  ['Poor','visibility · heavy snowfall','warn-val'],
-                  ['40–60 cm','new snow (24 hrs)',''],
-                  ['200–240 cm','base depth (upper mtn)',''],
-                ].map(([val, key, cls], i) => (
-                  <div key={i} className="weather-cell">
-                    <span className={`weather-cell-val${cls ? ' ' + cls : ''}`}>{val}</span>
-                    <span className="weather-cell-key">{key}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {[
-              ['On-piste','Good — fresh groomed snow, check lift opening times','good'],
-              ['Off-piste','Very Risky — natural release expected, remote triggering likely','risky'],
-              ['Ski touring','Avoid — do not tour today','avoid'],
-              ['Outlook','Danger decreasing Sat — cautious off-piste returning',''],
-            ].map(([label, val, cls]) => (
-              <div key={label} className="preview-row">
-                <span className="preview-row-label">{label}</span>
-                <span className={`preview-row-val${cls ? ' ' + cls : ''}`}>{val}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <LivePreview />
 
         <div className="divider">
           <span className="divider-line" />
@@ -245,6 +202,7 @@ export default function Home() {
                 <button type="submit" className="submit-btn" disabled={status === 'submitting'}>
                   {status === 'submitting' ? 'Subscribing...' : 'Start my briefings →'}
                 </button>
+                <p className="submit-note">Free forever. One email per day. Unsubscribe in a single click.</p>
               </div>
             </form>
           )}
@@ -252,7 +210,7 @@ export default function Home() {
 
         <footer className="site-footer">
           <span className="footer-copy">© {new Date().getFullYear()} SnowDesk</span>
-          <span className="footer-source">Data: SLF / WSL Institute &middot; whiterisk.ch &middot; slf.ch</span>
+          <span className="footer-source">Data: SLF / WSL Institute · whiterisk.ch · aws.slf.ch</span>
         </footer>
       </div>
     </>

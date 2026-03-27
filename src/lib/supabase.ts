@@ -16,6 +16,14 @@ export const supabaseAdmin = createClient(
   ── DATABASE SCHEMA ──────────────────────────────────────────────────────────
   Run this SQL in the Supabase SQL editor to create the required tables.
 
+  -- Bulletin preview cache (pre-computed analyses written by the cron job,
+  -- read by /api/preview so the sign-up page never calls Claude live)
+  create table bulletin_previews (
+    region_code  text primary key,
+    analysis     jsonb not null,
+    cached_at    timestamptz not null default now()
+  );
+
   -- Subscribers table
   create table subscribers (
     id                uuid primary key default gen_random_uuid(),
