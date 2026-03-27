@@ -15,11 +15,25 @@
  *   TEST_DELIVERY   "morning" | "evening" | "both" (defaults to "morning")
  */
 
-import * as dotenv from 'dotenv'
-import { resolve } from 'path'
+import * as fs from 'fs'
+import * as path from 'path'
 
-// Load .env.local from project root
-dotenv.config({ path: resolve(process.cwd(), '.env.local') })
+// Load .env.local manually — no dotenv dependency required
+function loadEnv() {
+  const envPath = path.resolve(process.cwd(), '.env.local')
+  if (!fs.existsSync(envPath)) return
+  const lines = fs.readFileSync(envPath, 'utf8').split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx === -1) continue
+    const key = trimmed.slice(0, eqIdx).trim()
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '')
+    if (key && !process.env[key]) process.env[key] = val
+  }
+}
+loadEnv()
 
 import { fetchStructuredBulletin } from '../src/lib/bulletin'
 import { analyseBulletin } from '../src/lib/analyse'
